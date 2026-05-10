@@ -78,7 +78,7 @@ func main() {
 	reviewHandler := task.NewExecuteReviewHandler(st, reg, hub)
 	mux.HandleFunc(task.TypeExecuteReview, reviewHandler.Handle)
 
-	postHandler := task.NewPostReviewHandler(st, cfg.GitHub.Token, hub)
+	postHandler := task.NewPostReviewHandler(st, ghClient, hub)
 	mux.HandleFunc(task.TypePostReview, postHandler.Handle)
 
 	cleanupHandler := task.NewCleanupWorktreeHandler(st, cfg.Scheduler.CleanupWorktreeAfterDays)

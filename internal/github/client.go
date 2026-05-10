@@ -1,25 +1,33 @@
 package github
 
 import (
-	"encoding/json"
+	"context"
 	"fmt"
 	"net/http"
+	"strings"
 	"time"
+
+	gh "github.com/google/go-github/v74/github"
+	"golang.org/x/oauth2"
 )
 
 type Client struct {
-	token      string
-	httpClient *http.Client
+	client *gh.Client
 }
 
 func NewClient(token string) *Client {
-	return &Client{
-		token: token,
-		httpClient: &http.Client{
-			Timeout: 30 * time.Second,
+	ts := oauth2.StaticTokenSource(&oauth2.Token{AccessToken: token})
+	tc := &http.Client{
+		Timeout: 180 * time.Second,
+		Transport: &oauth2.Transport{
+			Source: ts,
 		},
 	}
+	return &Client{client: gh.NewClient(tc)}
 }
+
+// GH returns the underlying go-github client for operations beyond search/get.
+func (c *Client) GH() *gh.Client { return c.client }
 
 type SearchPR struct {
 	NodeID  string `json:"node_id"`
@@ -41,34 +49,71 @@ type SearchPR struct {
 	} `json:"head"`
 }
 
-type searchResponse struct {
-	TotalCount int        `json:"total_count"`
-	Items      []SearchPR `json:"items"`
-}
-
 func (c *Client) SearchAssignedPRs() ([]SearchPR, error) {
+	ctx := context.Background()
 	query := "is:pr is:open review-requested:@me"
-	url := fmt.Sprintf("https://api.github.com/search/issues?q=%s&per_page=100", query)
 
-	req, _ := http.NewRequest("GET", url, nil)
-	req.Header.Set("Authorization", "Bearer "+c.token)
-	req.Header.Set("Accept", "application/vnd.github+json")
-
-	resp, err := c.httpClient.Do(req)
+	result, _, err := c.client.Search.Issues(ctx, query, &gh.SearchOptions{
+		ListOptions: gh.ListOptions{PerPage: 100},
+	})
 	if err != nil {
 		return nil, fmt.Errorf("github search: %w", err)
 	}
-	defer resp.Body.Close()
 
-	if resp.StatusCode != http.StatusOK {
-		return nil, fmt.Errorf("github search returned %d", resp.StatusCode)
-	}
+	var prs []SearchPR
+	for _, issue := range result.Issues {
+		owner, repo := parseIssueRepo(issue)
+		if owner == "" || repo == "" {
+			continue
+		}
 
-	var result searchResponse
-	if err := json.NewDecoder(resp.Body).Decode(&result); err != nil {
-		return nil, fmt.Errorf("decode search response: %w", err)
+		pr, _, err := c.client.PullRequests.Get(ctx, owner, repo, issue.GetNumber())
+		if err != nil {
+			continue
+		}
+
+		prs = append(prs, SearchPR{
+			NodeID:  issue.GetNodeID(),
+			Title:   issue.GetTitle(),
+			HTMLURL: issue.GetHTMLURL(),
+			Number:  issue.GetNumber(),
+			User: struct {
+				Login string `json:"login"`
+			}{
+				Login: issue.GetUser().GetLogin(),
+			},
+			Base: struct {
+				Ref string `json:"ref"`
+			}{
+				Ref: pr.GetBase().GetRef(),
+			},
+			Head: struct {
+				Ref  string `json:"ref"`
+				SHA  string `json:"sha"`
+				Repo struct {
+					FullName string `json:"full_name"`
+				} `json:"repo"`
+			}{
+				Ref: pr.GetHead().GetRef(),
+				SHA: pr.GetHead().GetSHA(),
+				Repo: struct {
+					FullName string `json:"full_name"`
+				}{
+					FullName: pr.GetHead().GetRepo().GetFullName(),
+				},
+			},
+		})
 	}
-	return result.Items, nil
+	return prs, nil
+}
+
+func parseIssueRepo(issue *gh.Issue) (owner, repo string) {
+	url := strings.TrimRight(issue.GetRepositoryURL(), "/")
+	parts := strings.Split(url, "/")
+	if len(parts) >= 2 {
+		return parts[len(parts)-2], parts[len(parts)-1]
+	}
+	return "", ""
 }
 
 type PRDetail struct {
@@ -80,25 +125,23 @@ type PRDetail struct {
 }
 
 func (c *Client) GetPR(repoFullName string, number int) (*PRDetail, error) {
-	url := fmt.Sprintf("https://api.github.com/repos/%s/pulls/%d", repoFullName, number)
+	owner, repoName, ok := strings.Cut(repoFullName, "/")
+	if !ok {
+		return nil, fmt.Errorf("invalid repoFullName: %s", repoFullName)
+	}
 
-	req, _ := http.NewRequest("GET", url, nil)
-	req.Header.Set("Authorization", "Bearer "+c.token)
-	req.Header.Set("Accept", "application/vnd.github+json")
-
-	resp, err := c.httpClient.Do(req)
+	pr, _, err := c.client.PullRequests.Get(context.Background(), owner, repoName, number)
 	if err != nil {
 		return nil, err
 	}
-	defer resp.Body.Close()
 
-	if resp.StatusCode == http.StatusNotFound {
-		return nil, fmt.Errorf("PR %s#%d not found", repoFullName, number)
-	}
-
-	var pr PRDetail
-	if err := json.NewDecoder(resp.Body).Decode(&pr); err != nil {
-		return nil, err
-	}
-	return &pr, nil
+	return &PRDetail{
+		State:  pr.GetState(),
+		Merged: pr.GetMerged(),
+		Head: struct {
+			SHA string `json:"sha"`
+		}{
+			SHA: pr.GetHead().GetSHA(),
+		},
+	}, nil
 }

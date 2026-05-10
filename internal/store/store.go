@@ -27,7 +27,7 @@ func (s *Store) DB() *gorm.DB { return s.db }
 
 // PR methods
 func (s *Store) UpsertPR(pr *PullRequest) error {
-	return s.db.Where("github_id = ?", pr.GitHubID).Assign(pr).FirstOrCreate(pr).Error
+	return s.db.Where("git_hub_id = ?", pr.GitHubID).Assign(pr).FirstOrCreate(pr).Error
 }
 
 func (s *Store) GetPR(id uint) (*PullRequest, error) {

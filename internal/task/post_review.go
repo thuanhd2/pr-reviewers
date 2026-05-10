@@ -1,29 +1,29 @@
 package task
 
 import (
-	"bytes"
 	"context"
 	"encoding/json"
 	"fmt"
-	"net/http"
 	"strings"
 
 	"github.com/hibiken/asynq"
 
+	"github.com/thuanho/pr-reviewers/internal/github"
 	"github.com/thuanho/pr-reviewers/internal/store"
 	"github.com/thuanho/pr-reviewers/internal/ws"
+	gh "github.com/google/go-github/v74/github"
 )
 
 const TypePostReview = "review:post"
 
 type PostReviewHandler struct {
-	store   *store.Store
-	ghToken string
-	wsHub   *ws.Hub
+	store    *store.Store
+	ghClient *github.Client
+	wsHub    *ws.Hub
 }
 
-func NewPostReviewHandler(s *store.Store, ghToken string, hub *ws.Hub) *PostReviewHandler {
-	return &PostReviewHandler{store: s, ghToken: ghToken, wsHub: hub}
+func NewPostReviewHandler(s *store.Store, ghClient *github.Client, hub *ws.Hub) *PostReviewHandler {
+	return &PostReviewHandler{store: s, ghClient: ghClient, wsHub: hub}
 }
 
 func (h *PostReviewHandler) Handle(ctx context.Context, t *asynq.Task) error {
@@ -44,41 +44,28 @@ func (h *PostReviewHandler) Handle(ctx context.Context, t *asynq.Task) error {
 		return fmt.Errorf("get PR %d: %w", review.PullRequestID, err)
 	}
 
-	parts := strings.SplitN(pr.RepoFullName, "/", 2)
-	owner, repoName := parts[0], parts[1]
-	url := fmt.Sprintf("https://api.github.com/repos/%s/%s/pulls/%d/reviews", owner, repoName, pr.Number)
+	owner, repoName, _ := strings.Cut(pr.RepoFullName, "/")
 
-	comments := make([]map[string]any, 0, len(review.Comments))
+	comments := make([]*gh.DraftReviewComment, 0, len(review.Comments))
 	for _, c := range review.Comments {
-		comments = append(comments, map[string]any{
-			"path":       c.FilePath,
-			"line":       c.LineEnd,
-			"start_line": c.LineStart,
-			"side":       "RIGHT",
-			"body":       c.Body,
+		comments = append(comments, &gh.DraftReviewComment{
+			Path:      gh.Ptr(c.FilePath),
+			Line:      gh.Ptr(c.LineEnd),
+			StartLine: gh.Ptr(c.LineStart),
+			Side:      gh.Ptr("RIGHT"),
+			Body:      gh.Ptr(c.Body),
 		})
 	}
 
-	body := map[string]any{
-		"body":      review.Summary,
-		"event":     review.OverallVerdict,
-		"commit_id": pr.HeadSHA,
-		"comments":  comments,
+	reviewReq := &gh.PullRequestReviewRequest{
+		Body:     gh.Ptr(review.Summary),
+		Event:    gh.Ptr(review.OverallVerdict),
+		CommitID: gh.Ptr(pr.HeadSHA),
+		Comments: comments,
 	}
 
-	jsonBody, _ := json.Marshal(body)
-	req, _ := http.NewRequest("POST", url, bytes.NewReader(jsonBody))
-	req.Header.Set("Authorization", "Bearer "+h.ghToken)
-	req.Header.Set("Accept", "application/vnd.github+json")
-
-	resp, err := http.DefaultClient.Do(req)
-	if err != nil {
+	if _, _, err := h.ghClient.GH().PullRequests.CreateReview(ctx, owner, repoName, pr.Number, reviewReq); err != nil {
 		return fmt.Errorf("post review: %w", err)
-	}
-	defer resp.Body.Close()
-
-	if resp.StatusCode >= 300 {
-		return fmt.Errorf("post review returned %d", resp.StatusCode)
 	}
 
 	h.store.UpdateReview(review.ID, map[string]any{"status": "posted"})
