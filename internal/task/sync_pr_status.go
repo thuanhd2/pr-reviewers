@@ -25,10 +25,13 @@ func NewSyncPRStatusHandler(s *store.Store, gh *github.Client, hub *ws.Hub) *Syn
 }
 
 func (h *SyncPRStatusHandler) Handle(ctx context.Context, t *asynq.Task) error {
+	log.Println("Starting to sync PR status")
 	prs, err := h.store.ListOpenPRs()
 	if err != nil {
+		log.Printf("Error when list open PRs: %v", err)
 		return err
 	}
+	log.Printf("Found %d open PRs", len(prs))
 
 	for _, pr := range prs {
 		detail, err := h.ghClient.GetPR(pr.RepoFullName, pr.Number)

@@ -26,21 +26,13 @@ func main() {
 		log.Fatalf("load config: %v", err)
 	}
 
-	dsn := os.Getenv("DATABASE_URL")
-	if dsn == "" {
-		dsn = "postgres://pr_reviewer:pr_reviewer_dev@localhost:5432/pr_reviewer?sslmode=disable"
-	}
-
+	dsn := cfg.Database.URL
 	st, err := store.New(dsn)
 	if err != nil {
 		log.Fatalf("connect database: %v", err)
 	}
 
-	redisAddr := os.Getenv("REDIS_URL")
-	if redisAddr == "" {
-		redisAddr = "localhost:6379"
-	}
-
+	redisAddr := cfg.Redis.Addr
 	redisOpt := asynq.RedisClientOpt{Addr: redisAddr}
 
 	asynqClient := asynq.NewClient(redisOpt)

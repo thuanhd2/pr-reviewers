@@ -6,6 +6,7 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
+	"log"
 	"os"
 	"os/exec"
 	"strings"
@@ -32,6 +33,7 @@ func NewExecuteReviewHandler(s *store.Store, reg *executor.Registry, hub *ws.Hub
 }
 
 func (h *ExecuteReviewHandler) Handle(ctx context.Context, t *asynq.Task) error {
+	log.Println("Starting to execute review")
 	var payload struct {
 		PRID uint `json:"pr_id"`
 	}
@@ -145,6 +147,7 @@ func (h *ExecuteReviewHandler) Handle(ctx context.Context, t *asynq.Task) error 
 
 	if err := c.Run(); err != nil {
 		logLine("ERROR: executor run: %v", err)
+		logLine("STDOUT: %s", stdout.String())
 		logLine("STDERR: %s", stderr.String())
 		h.store.UpdateReview(review.ID, map[string]any{
 			"status":       "failed",

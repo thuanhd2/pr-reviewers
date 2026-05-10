@@ -1,3 +1,8 @@
+redis:
+  addr: "localhost:6379"
+database:
+  url: "postgres://pr_reviewer:pr_reviewer_dev@localhost:5432/pr_reviewer?sslmode=disable"
+
 github:
   token: "" # or use GITHUB_TOKEN env var
 

@@ -14,6 +14,8 @@ type Config struct {
 	Executors []ExecutorDef   `yaml:"executors"`
 	Repos     []RepoMapping   `yaml:"repo_mappings"`
 	DeepSeek  DeepSeekConfig  `yaml:"deepseek"`
+	Redis     RedisConfig     `yaml:"redis"`
+	Database  DatabaseConfig  `yaml:"database"`
 }
 
 type DeepSeekConfig struct {
@@ -45,6 +47,14 @@ type RepoMapping struct {
 	LocalPath  string  `yaml:"local_path"`
 	CLI        string  `yaml:"cli"`
 	ExtraRules *string `yaml:"extra_rules"`
+}
+
+type RedisConfig struct {
+	Addr string `yaml:"addr"`
+}
+
+type DatabaseConfig struct {
+	URL string `yaml:"url"`
 }
 
 func Load(path string) (*Config, error) {

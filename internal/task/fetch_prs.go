@@ -26,6 +26,7 @@ func NewFetchPRsHandler(s *store.Store, gh *github.Client, hub *ws.Hub, ac *asyn
 }
 
 func (h *FetchPRsHandler) Handle(ctx context.Context, t *asynq.Task) error {
+	log.Println("Starting to fetch PRs")
 	searchPRs, err := h.ghClient.SearchAssignedPRs()
 	if err != nil {
 		log.Printf("error searching PRs: %v", err)
