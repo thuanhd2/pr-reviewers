@@ -82,6 +82,7 @@ func (h *ExecuteReviewHandler) Handle(ctx context.Context, t *asynq.Task) error 
 	c := exec.CommandContext(ctx, "sh", "-c", cmd.Command)
 	c.Stdin = strings.NewReader(cmd.Prompt)
 	c.Dir = cmd.WorkingDir
+	c.Env = os.Environ()
 	for k, v := range cmd.InjectEnvVars {
 		c.Env = append(c.Env, fmt.Sprintf("%s=%s", k, v))
 	}
