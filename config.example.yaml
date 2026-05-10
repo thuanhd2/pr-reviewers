@@ -1,0 +1,21 @@
+github:
+  token: "" # or use GITHUB_TOKEN env var
+
+scheduler:
+  fetch_interval: "15m"
+  cleanup_worktree_after_days: 30
+
+projects_root:
+  - /Users/thuanho/projects
+  - /Users/thuanho/Documents/personal
+
+executors:
+  - name: claude-code
+    active: true
+    timeout: "60m"
+
+repo_mappings:
+  - repo: company/backend-api
+    local_path: /Users/thuanho/projects/backend-api
+    cli: claude-code
+    extra_rules: ""

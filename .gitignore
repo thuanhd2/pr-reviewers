@@ -1,0 +1,12 @@
+bin/
+logs/
+node_modules/
+config.yaml
+/tmp/
+web/dist/
+*.exe
+*.exe~
+*.dll
+*.so
+*.dylib
+.DS_Store
