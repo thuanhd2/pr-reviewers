@@ -17,9 +17,6 @@ func New(dsn string) (*Store, error) {
 	if err != nil {
 		return nil, err
 	}
-	if err := db.AutoMigrate(&PullRequest{}, &Review{}, &ReviewComment{}, &RepoConfig{}, &CLIConfig{}); err != nil {
-		return nil, err
-	}
 	return &Store{db: db}, nil
 }
 
