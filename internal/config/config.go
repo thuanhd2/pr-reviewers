@@ -13,6 +13,16 @@ type Config struct {
 	Projects  []string        `yaml:"projects_root"`
 	Executors []ExecutorDef   `yaml:"executors"`
 	Repos     []RepoMapping   `yaml:"repo_mappings"`
+	DeepSeek  DeepSeekConfig  `yaml:"deepseek"`
+}
+
+type DeepSeekConfig struct {
+	BaseURL           string `yaml:"base_url"`
+	AuthToken         string `yaml:"auth_token"`
+	Model             string `yaml:"model"`
+	DefaultOpusModel  string `yaml:"default_opus_model"`
+	DefaultSonetModel string `yaml:"default_sonet_model"`
+	DefaultHakuModel  string `yaml:"default_haku_model"`
 }
 
 type GitHubConfig struct {

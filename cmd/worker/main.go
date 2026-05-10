@@ -58,6 +58,8 @@ func main() {
 			reg.Register(executor.NewClaudeCodeExecutor(60 * 60 * 1_000_000_000))
 		case "codex":
 			reg.Register(executor.NewCodexExecutor(60 * 60 * 1_000_000_000))
+		case "deepseek":
+			reg.Register(executor.NewDeepSeekExecutor(cfg.DeepSeek, 60*60*1_000_000_000))
 		}
 	}
 

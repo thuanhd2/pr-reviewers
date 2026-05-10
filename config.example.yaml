@@ -19,3 +19,11 @@ repo_mappings:
     local_path: /Users/thuanho/projects/backend-api
     cli: claude-code
     extra_rules: ""
+
+deepseek:
+  base_url: "https://api.deepseek.com"
+  auth_token: ""
+  model: "deepseek-v4-pro"
+  default_opus_model: "deepseek-v4-pro"
+  default_sonet_model: "deepseek-v4-pro"
+  default_haku_model: "deepseek-v4-flash"
