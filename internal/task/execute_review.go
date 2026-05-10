@@ -4,13 +4,15 @@ import (
 	"bytes"
 	"context"
 	"encoding/json"
+	"errors"
 	"fmt"
-	"log"
 	"os"
 	"os/exec"
 	"strings"
+	"time"
 
 	"github.com/hibiken/asynq"
+	"gorm.io/gorm"
 
 	"github.com/thuanho/pr-reviewers/internal/executor"
 	"github.com/thuanho/pr-reviewers/internal/store"
@@ -42,40 +44,89 @@ func (h *ExecuteReviewHandler) Handle(ctx context.Context, t *asynq.Task) error 
 		return fmt.Errorf("get PR %d: %w", payload.PRID, err)
 	}
 
-	h.store.UpdatePRStatus(pr.ID, "reviewing")
+	var logsBuffer bytes.Buffer
+	logLine := func(format string, args ...any) {
+		ts := time.Now().Format("2006-01-02 15:04:05")
+		line := fmt.Sprintf("[%s] "+format+"\n", append([]any{ts}, args...)...)
+		logsBuffer.WriteString(line)
+	}
+
+	// Create or recover Review early in the process
+	var review *store.Review
+	latestReview, err := h.store.GetLatestReviewForPR(pr.ID)
+	if err != nil && !errors.Is(err, gorm.ErrRecordNotFound) {
+		return fmt.Errorf("get latest review: %w", err)
+	}
+	if err == nil && latestReview.CommitSHA == pr.HeadSHA {
+		review = latestReview
+		h.store.UpdateReview(review.ID, map[string]any{"status": "reviewing"})
+	} else {
+		review = &store.Review{
+			PullRequestID: pr.ID,
+			CommitSHA:     pr.HeadSHA,
+			Status:        "reviewing",
+		}
+		if err := h.store.CreateReview(review); err != nil {
+			return fmt.Errorf("create review: %w", err)
+		}
+	}
+
+	logLine("Starting review for PR #%d (review_id=%d)", pr.Number, review.ID)
 
 	rc, err := h.store.GetRepoConfig(pr.RepoFullName)
 	if err != nil {
-		log.Printf("no repo config for %s: %v", pr.RepoFullName, err)
-		h.store.UpdatePRStatus(pr.ID, "failed")
+		logLine("ERROR: no repo config for %s: %v", pr.RepoFullName, err)
+		h.store.UpdateReview(review.ID, map[string]any{
+			"status":       "failed",
+			"process_logs": logsBuffer.String(),
+		})
 		return nil
 	}
+	logLine("Repo config found: cli=%s", rc.CLI)
 
 	exe, err := h.registry.Get(rc.CLI)
 	if err != nil {
-		log.Printf("executor %q not found: %v", rc.CLI, err)
-		h.store.UpdatePRStatus(pr.ID, "failed")
+		logLine("ERROR: executor %q not found: %v", rc.CLI, err)
+		h.store.UpdateReview(review.ID, map[string]any{
+			"status":       "failed",
+			"process_logs": logsBuffer.String(),
+		})
 		return nil
 	}
+	logLine("Executor ready: %s", exe.Name())
 
 	if err := h.fetchRemoteBranch(pr, rc); err != nil {
-		log.Printf("fetch remote branch: %v", err)
-		h.store.UpdatePRStatus(pr.ID, "failed")
+		logLine("ERROR: fetch remote branch: %v", err)
+		h.store.UpdateReview(review.ID, map[string]any{
+			"status":       "failed",
+			"process_logs": logsBuffer.String(),
+		})
 		return nil
 	}
+	logLine("Fetched remote branch: %s", pr.HeadBranch)
 
 	worktreePath, err := h.ensureWorktree(pr, rc)
 	if err != nil {
-		log.Printf("worktree for PR %d: %v", pr.ID, err)
-		h.store.UpdatePRStatus(pr.ID, "failed")
+		logLine("ERROR: worktree for PR %d: %v", pr.ID, err)
+		h.store.UpdateReview(review.ID, map[string]any{
+			"status":       "failed",
+			"process_logs": logsBuffer.String(),
+		})
 		return nil
 	}
 	pr.WorktreePath = worktreePath
+	logLine("Worktree ready at %s", worktreePath)
 
 	cmd, err := exe.GetReviewCommand(ctx, pr, rc)
 	if err != nil {
+		logLine("ERROR: get review command: %v", err)
+		h.store.UpdateReview(review.ID, map[string]any{
+			"status":       "failed",
+			"process_logs": logsBuffer.String(),
+		})
 		return fmt.Errorf("get review command: %w", err)
 	}
+	logLine("Review command prepared")
 
 	var stdout bytes.Buffer
 	var stderr bytes.Buffer
@@ -88,30 +139,49 @@ func (h *ExecuteReviewHandler) Handle(ctx context.Context, t *asynq.Task) error 
 	c.Stdout = &stdout
 	c.Stderr = &stderr
 
+	startTime := time.Now()
+	logLine("Running executor: %s", exe.Name())
+
 	if err := c.Run(); err != nil {
-		log.Printf("executor run: %v, stderr: %s", err, stderr.String())
-		h.store.UpdatePRStatus(pr.ID, "failed")
+		logLine("ERROR: executor run: %v", err)
+		logLine("STDERR: %s", stderr.String())
+		h.store.UpdateReview(review.ID, map[string]any{
+			"status":       "failed",
+			"process_logs": logsBuffer.String(),
+		})
 		return nil
+	}
+
+	elapsed := time.Since(startTime)
+	logLine("Executor completed in %s", elapsed.Round(time.Second))
+	logLine("STDOUT: %s", stdout.String())
+	if stderr.Len() > 0 {
+		logLine("STDERR: %s", stderr.String())
 	}
 
 	result, err := parseReviewResult(stdout.String())
 	if err != nil {
-		log.Printf("parse review result: %v, raw: %s", err, stdout.String())
-		h.store.UpdatePRStatus(pr.ID, "failed")
+		logLine("ERROR: parse review result: %v", err)
+		h.store.UpdateReview(review.ID, map[string]any{
+			"status":       "failed",
+			"process_logs": logsBuffer.String(),
+		})
 		return nil
 	}
+	logLine("Parsed result: verdict=%s, comments=%d", result.OverallVerdict, len(result.Comments))
 
-	review := &store.Review{
-		PullRequestID:  pr.ID,
-		CommitSHA:      pr.HeadSHA,
-		Summary:        result.Summary,
-		OverallVerdict: result.OverallVerdict,
-		Status:         "draft",
-		ExecutorName:   exe.Name(),
-	}
-	if err := h.store.CreateReview(review); err != nil {
-		return fmt.Errorf("create review: %w", err)
-	}
+	h.store.UpdateReview(review.ID, map[string]any{
+		"summary":         result.Summary,
+		"overall_verdict": result.OverallVerdict,
+		"status":          "draft",
+		"executor_name":   exe.Name(),
+		"process_logs":    logsBuffer.String(),
+	})
+
+	review.Summary = result.Summary
+	review.OverallVerdict = result.OverallVerdict
+	review.Status = "draft"
+	review.ExecutorName = exe.Name()
 
 	for _, c := range result.Comments {
 		comment := &store.ReviewComment{
@@ -123,8 +193,6 @@ func (h *ExecuteReviewHandler) Handle(ctx context.Context, t *asynq.Task) error 
 		}
 		h.store.CreateComment(comment)
 	}
-
-	h.store.UpdatePRStatus(pr.ID, "drafted")
 
 	reviewData, _ := json.Marshal(review)
 	h.wsHub.Publish("pr-updates", reviewData)
@@ -152,8 +220,6 @@ func (h *ExecuteReviewHandler) ensureWorktree(pr *store.PullRequest, rc *store.R
 	}
 
 	worktreePath := fmt.Sprintf("/tmp/pr-reviews/%s/pr-review-%d", rc.RepoFullName, pr.ID)
-	// command:
-	// git -C <local_path> worktree add --detach <worktree_path> <commit_sha>
 	c := exec.Command("git", "-C", rc.LocalPath, "worktree", "add", "--detach", worktreePath, pr.HeadSHA)
 	if err := c.Run(); err != nil {
 		return "", fmt.Errorf("worktree add: %w", err)

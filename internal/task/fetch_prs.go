@@ -54,7 +54,7 @@ func (h *FetchPRsHandler) Handle(ctx context.Context, t *asynq.Task) error {
 		}
 
 		latestReview, _ := h.store.GetLatestReviewForPR(pr.ID)
-		if latestReview == nil || latestReview.CommitSHA != sp.Head.SHA {
+		if latestReview == nil || latestReview.CommitSHA != sp.Head.SHA || latestReview.Status == "reviewing" {
 			payload, _ := json.Marshal(map[string]uint{"pr_id": pr.ID})
 			h.asynqClient.Enqueue(asynq.NewTask(TypeExecuteReview, payload))
 		}

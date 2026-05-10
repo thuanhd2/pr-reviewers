@@ -29,6 +29,7 @@ type Review struct {
 	OverallVerdict string          `json:"overall_verdict"`
 	Status         string          `json:"status" gorm:"default:draft"`
 	ExecutorName   string          `json:"executor_name"`
+	ProcessLogs    string          `json:"process_logs"`
 	CreatedAt      time.Time       `json:"created_at"`
 	UpdatedAt      time.Time       `json:"updated_at"`
 	Comments       []ReviewComment `json:"comments,omitempty" gorm:"foreignKey:ReviewID"`

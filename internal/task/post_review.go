@@ -69,7 +69,6 @@ func (h *PostReviewHandler) Handle(ctx context.Context, t *asynq.Task) error {
 	}
 
 	h.store.UpdateReview(review.ID, map[string]any{"status": "posted"})
-	h.store.UpdatePRStatus(pr.ID, "posted")
 
 	reviewData, _ := json.Marshal(review)
 	h.wsHub.Publish("pr-updates", reviewData)
