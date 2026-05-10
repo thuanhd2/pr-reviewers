@@ -13,6 +13,9 @@ executors:
   - name: claude-code
     active: true
     timeout: "60m"
+  - name: deepseek
+    active: true
+    timeout: "60m"
 
 repo_mappings:
   - repo: company/backend-api

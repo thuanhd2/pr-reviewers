@@ -36,18 +36,6 @@ func main() {
 	if err != nil {
 		log.Fatalf("connect database: %v", err)
 	}
-	st.SeedCLIConfigs()
-
-	// Seed repo configs from config file
-	for _, rm := range cfg.Repos {
-		st.CreateRepoConfig(&store.RepoConfig{
-			RepoFullName: rm.Repo,
-			LocalPath:    rm.LocalPath,
-			CLI:          rm.CLI,
-			ExtraRules:   rm.ExtraRules,
-			Active:       true,
-		})
-	}
 
 	redisAddr := os.Getenv("REDIS_URL")
 	if redisAddr == "" {
@@ -58,7 +46,12 @@ func main() {
 	defer asynqClient.Close()
 
 	reg := executor.NewRegistry()
-	for _, ed := range cfg.Executors {
+	// load executors from database
+	executors, err := st.ListCLIConfigs()
+	if err != nil {
+		log.Fatalf("list cli configs: %v", err)
+	}
+	for _, ed := range executors {
 		if !ed.Active {
 			continue
 		}
@@ -67,6 +60,8 @@ func main() {
 			reg.Register(executor.NewClaudeCodeExecutor(60 * 60 * 1_000_000_000))
 		case "codex":
 			reg.Register(executor.NewCodexExecutor(60 * 60 * 1_000_000_000))
+		case "deepseek":
+			reg.Register(executor.NewDeepSeekExecutor(cfg.DeepSeek, 60*60*1_000_000_000))
 		}
 	}
 

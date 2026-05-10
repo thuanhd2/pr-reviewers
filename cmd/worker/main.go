@@ -49,7 +49,12 @@ func main() {
 	ghClient := github.NewClient(cfg.GitHub.Token)
 
 	reg := executor.NewRegistry()
-	for _, ed := range cfg.Executors {
+	// load executors from database
+	executors, err := st.ListCLIConfigs()
+	if err != nil {
+		log.Fatalf("list cli configs: %v", err)
+	}
+	for _, ed := range executors {
 		if !ed.Active {
 			continue
 		}

@@ -58,6 +58,12 @@ func (h *ExecuteReviewHandler) Handle(ctx context.Context, t *asynq.Task) error 
 		return nil
 	}
 
+	if err := h.fetchRemoteBranch(pr, rc); err != nil {
+		log.Printf("fetch remote branch: %v", err)
+		h.store.UpdatePRStatus(pr.ID, "failed")
+		return nil
+	}
+
 	worktreePath, err := h.ensureWorktree(pr, rc)
 	if err != nil {
 		log.Printf("worktree for PR %d: %v", pr.ID, err)
@@ -73,7 +79,8 @@ func (h *ExecuteReviewHandler) Handle(ctx context.Context, t *asynq.Task) error 
 
 	var stdout bytes.Buffer
 	var stderr bytes.Buffer
-	c := exec.CommandContext(ctx, "sh", "-c", fmt.Sprintf("echo '%s' | %s", cmd.Prompt, cmd.Command))
+	c := exec.CommandContext(ctx, "sh", "-c", cmd.Command)
+	c.Stdin = strings.NewReader(cmd.Prompt)
 	c.Dir = cmd.WorkingDir
 	for k, v := range cmd.InjectEnvVars {
 		c.Env = append(c.Env, fmt.Sprintf("%s=%s", k, v))
@@ -125,6 +132,14 @@ func (h *ExecuteReviewHandler) Handle(ctx context.Context, t *asynq.Task) error 
 	return nil
 }
 
+func (h *ExecuteReviewHandler) fetchRemoteBranch(pr *store.PullRequest, rc *store.RepoConfig) error {
+	c := exec.Command("git", "-C", rc.LocalPath, "fetch", "origin", pr.HeadBranch)
+	if err := c.Run(); err != nil {
+		return fmt.Errorf("fetch remote branch: %w", err)
+	}
+	return nil
+}
+
 func (h *ExecuteReviewHandler) ensureWorktree(pr *store.PullRequest, rc *store.RepoConfig) (string, error) {
 	if pr.WorktreePath != "" {
 		if _, err := os.Stat(pr.WorktreePath); err == nil {
@@ -136,7 +151,9 @@ func (h *ExecuteReviewHandler) ensureWorktree(pr *store.PullRequest, rc *store.R
 		}
 	}
 
-	worktreePath := fmt.Sprintf("/tmp/pr-review-%d", pr.ID)
+	worktreePath := fmt.Sprintf("/tmp/pr-reviews/%s/pr-review-%d", rc.RepoFullName, pr.ID)
+	// command:
+	// git -C <local_path> worktree add --detach <worktree_path> <commit_sha>
 	c := exec.Command("git", "-C", rc.LocalPath, "worktree", "add", "--detach", worktreePath, pr.HeadSHA)
 	if err := c.Run(); err != nil {
 		return "", fmt.Errorf("worktree add: %w", err)
