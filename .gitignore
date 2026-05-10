@@ -11,4 +11,6 @@ web/dist/
 *.dylib
 .DS_Store
 
+vendors/
+
 .serena/
