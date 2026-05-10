@@ -11,7 +11,8 @@
 import { Route as rootRouteImport } from './routes/__root'
 import { Route as AuthenticatedRouteRouteImport } from './routes/_authenticated/route'
 import { Route as AuthenticatedIndexRouteImport } from './routes/_authenticated/index'
-import { Route as AuthenticatedPrsRouteImport } from './routes/_authenticated/prs'
+import { Route as AuthenticatedPrsRouteImport } from './routes/_authenticated/prs/route'
+import { Route as AuthenticatedPrsIndexRouteImport } from './routes/_authenticated/prs/index'
 import { Route as AuthenticatedHistoryRouteImport } from './routes/_authenticated/history'
 import { Route as errors503RouteImport } from './routes/(errors)/503'
 import { Route as errors500RouteImport } from './routes/(errors)/500'
@@ -22,8 +23,8 @@ import { Route as AuthenticatedSettingsRouteRouteImport } from './routes/_authen
 import { Route as AuthenticatedSettingsIndexRouteImport } from './routes/_authenticated/settings/index'
 import { Route as AuthenticatedSettingsReposRouteImport } from './routes/_authenticated/settings/repos'
 import { Route as AuthenticatedSettingsClisRouteImport } from './routes/_authenticated/settings/clis'
-import { Route as AuthenticatedPrsPrIdRouteImport } from './routes/_authenticated/prs.$prId'
-import { Route as AuthenticatedPrsPrIdReviewsReviewIdRouteImport } from './routes/_authenticated/prs.$prId.reviews.$reviewId'
+import { Route as AuthenticatedPrsPrIdRouteImport } from './routes/_authenticated/prs/$prId'
+import { Route as AuthenticatedPrsPrIdReviewsReviewIdRouteImport } from './routes/_authenticated/prs/$prId.reviews.$reviewId'
 
 const AuthenticatedRouteRoute = AuthenticatedRouteRouteImport.update({
   id: '/_authenticated',
@@ -38,6 +39,11 @@ const AuthenticatedPrsRoute = AuthenticatedPrsRouteImport.update({
   id: '/prs',
   path: '/prs',
   getParentRoute: () => AuthenticatedRouteRoute,
+} as any)
+const AuthenticatedPrsIndexRoute = AuthenticatedPrsIndexRouteImport.update({
+  id: '/',
+  path: '/',
+  getParentRoute: () => AuthenticatedPrsRoute,
 } as any)
 const AuthenticatedHistoryRoute = AuthenticatedHistoryRouteImport.update({
   id: '/history',
@@ -115,6 +121,7 @@ export interface FileRoutesByFullPath {
   '/503': typeof errors503Route
   '/history': typeof AuthenticatedHistoryRoute
   '/prs': typeof AuthenticatedPrsRouteWithChildren
+  '/prs/': typeof AuthenticatedPrsIndexRoute
   '/prs/$prId': typeof AuthenticatedPrsPrIdRouteWithChildren
   '/settings/clis': typeof AuthenticatedSettingsClisRoute
   '/settings/repos': typeof AuthenticatedSettingsReposRoute
@@ -130,6 +137,7 @@ export interface FileRoutesByTo {
   '/history': typeof AuthenticatedHistoryRoute
   '/prs': typeof AuthenticatedPrsRouteWithChildren
   '/': typeof AuthenticatedIndexRoute
+  '/prs/': typeof AuthenticatedPrsIndexRoute
   '/prs/$prId': typeof AuthenticatedPrsPrIdRouteWithChildren
   '/settings/clis': typeof AuthenticatedSettingsClisRoute
   '/settings/repos': typeof AuthenticatedSettingsReposRoute
@@ -148,6 +156,7 @@ export interface FileRoutesById {
   '/_authenticated/history': typeof AuthenticatedHistoryRoute
   '/_authenticated/prs': typeof AuthenticatedPrsRouteWithChildren
   '/_authenticated/': typeof AuthenticatedIndexRoute
+  '/_authenticated/prs/': typeof AuthenticatedPrsIndexRoute
   '/_authenticated/prs/$prId': typeof AuthenticatedPrsPrIdRouteWithChildren
   '/_authenticated/settings/clis': typeof AuthenticatedSettingsClisRoute
   '/_authenticated/settings/repos': typeof AuthenticatedSettingsReposRoute
@@ -166,6 +175,7 @@ export interface FileRouteTypes {
     | '/503'
     | '/history'
     | '/prs'
+    | '/prs/'
     | '/prs/$prId'
     | '/settings/clis'
     | '/settings/repos'
@@ -181,6 +191,7 @@ export interface FileRouteTypes {
     | '/history'
     | '/prs'
     | '/'
+    | '/prs/'
     | '/prs/$prId'
     | '/settings/clis'
     | '/settings/repos'
@@ -198,6 +209,7 @@ export interface FileRouteTypes {
     | '/_authenticated/history'
     | '/_authenticated/prs'
     | '/_authenticated/'
+    | '/_authenticated/prs/'
     | '/_authenticated/prs/$prId'
     | '/_authenticated/settings/clis'
     | '/_authenticated/settings/repos'
@@ -236,6 +248,13 @@ declare module '@tanstack/react-router' {
       fullPath: '/prs'
       preLoaderRoute: typeof AuthenticatedPrsRouteImport
       parentRoute: typeof AuthenticatedRouteRoute
+    }
+    '/_authenticated/prs/': {
+      id: '/_authenticated/prs/'
+      path: '/'
+      fullPath: '/prs/'
+      preLoaderRoute: typeof AuthenticatedPrsIndexRouteImport
+      parentRoute: typeof AuthenticatedPrsRoute
     }
     '/_authenticated/history': {
       id: '/_authenticated/history'
@@ -355,10 +374,12 @@ const AuthenticatedPrsPrIdRouteWithChildren =
   AuthenticatedPrsPrIdRoute._addFileChildren(AuthenticatedPrsPrIdRouteChildren)
 
 interface AuthenticatedPrsRouteChildren {
+  AuthenticatedPrsIndexRoute: typeof AuthenticatedPrsIndexRoute
   AuthenticatedPrsPrIdRoute: typeof AuthenticatedPrsPrIdRouteWithChildren
 }
 
 const AuthenticatedPrsRouteChildren: AuthenticatedPrsRouteChildren = {
+  AuthenticatedPrsIndexRoute: AuthenticatedPrsIndexRoute,
   AuthenticatedPrsPrIdRoute: AuthenticatedPrsPrIdRouteWithChildren,
 }
 
