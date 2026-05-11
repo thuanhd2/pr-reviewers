@@ -89,9 +89,12 @@ func main() {
 	reviewHandler := handler.NewReviewHandler(st, asynqClient)
 	configHandler := handler.NewConfigHandler(st, reg)
 	dashHandler := handler.NewDashboardHandler(st)
+	schedHandler := handler.NewSchedulerHandler(st)
 
 	api := r.Group("/api")
 	{
+		api.GET("/scheduler/jobs", schedHandler.ListJobs)
+
 		api.GET("/prs", prHandler.List)
 		api.GET("/prs/:id", prHandler.Get)
 		api.POST("/prs/:id/refresh", prHandler.Refresh)

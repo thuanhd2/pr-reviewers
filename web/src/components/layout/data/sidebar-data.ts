@@ -5,6 +5,7 @@ import {
   Settings,
   Wrench,
   Terminal,
+  Clock,
 } from 'lucide-react'
 import { type SidebarData } from '../types'
 
@@ -33,6 +34,11 @@ export const sidebarData: SidebarData = {
           title: 'History',
           url: '/history',
           icon: History,
+        },
+        {
+          title: 'Scheduler',
+          url: '/scheduler-jobs',
+          icon: Clock,
         },
       ],
     },
