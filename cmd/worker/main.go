@@ -65,14 +65,25 @@ func main() {
 		log.Fatalf("create ws hub: %v", err)
 	}
 
+	tracker := scheduler.NewJobTracker(st, hub)
+
+	fetchInterval := cfg.FetchInterval()
+	cronSpec := "@every " + fetchInterval.String()
+
+	tracker.UpsertJobDefinitions([]scheduler.JobDef{
+		{JobName: "Fetch assigned PRs", TaskType: task.TypeFetchAssignedPRs, CronSpec: cronSpec},
+		{JobName: "Sync PR status", TaskType: task.TypeSyncPRStatus, CronSpec: cronSpec},
+		{JobName: "Cleanup worktrees", TaskType: task.TypeCleanupWorktree, CronSpec: "0 2 * * *"},
+	})
+
 	// Mux for task handlers
 	mux := asynq.NewServeMux()
 
 	fetchHandler := task.NewFetchPRsHandler(st, ghClient, hub, asynqClient)
-	mux.HandleFunc(task.TypeFetchAssignedPRs, fetchHandler.Handle)
+	mux.HandleFunc(task.TypeFetchAssignedPRs, tracker.Wrap("Fetch assigned PRs", cronSpec, fetchHandler.Handle))
 
 	syncHandler := task.NewSyncPRStatusHandler(st, ghClient, hub)
-	mux.HandleFunc(task.TypeSyncPRStatus, syncHandler.Handle)
+	mux.HandleFunc(task.TypeSyncPRStatus, tracker.Wrap("Sync PR status", cronSpec, syncHandler.Handle))
 
 	reviewHandler := task.NewExecuteReviewHandler(st, reg, hub)
 	mux.HandleFunc(task.TypeExecuteReview, reviewHandler.Handle)
@@ -81,7 +92,7 @@ func main() {
 	mux.HandleFunc(task.TypePostReview, postHandler.Handle)
 
 	cleanupHandler := task.NewCleanupWorktreeHandler(st, cfg.Scheduler.CleanupWorktreeAfterDays)
-	mux.HandleFunc(task.TypeCleanupWorktree, cleanupHandler.Handle)
+	mux.HandleFunc(task.TypeCleanupWorktree, tracker.Wrap("Cleanup worktrees", "0 2 * * *", cleanupHandler.Handle))
 
 	// Scheduler
 	sched := asynq.NewScheduler(redisOpt, nil)

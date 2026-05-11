@@ -1,6 +1,8 @@
 package store
 
 import (
+	"time"
+
 	"gorm.io/driver/postgres"
 	"gorm.io/gorm"
 	"gorm.io/gorm/logger"
@@ -162,6 +164,37 @@ func (s *Store) ListCLIConfigs() ([]CLIConfig, error) {
 	var configs []CLIConfig
 	err := s.db.Find(&configs).Error
 	return configs, err
+}
+
+// SchedulerJob methods
+func (s *Store) UpsertSchedulerJob(job *SchedulerJob) error {
+	return s.db.Where("job_name = ?", job.JobName).Assign(job).FirstOrCreate(job).Error
+}
+
+func (s *Store) ListSchedulerJobs() ([]SchedulerJob, error) {
+	var jobs []SchedulerJob
+	err := s.db.Order("job_name ASC").Find(&jobs).Error
+	return jobs, err
+}
+
+func (s *Store) SetSchedulerJobRunning(jobName string) error {
+	return s.db.Model(&SchedulerJob{}).Where("job_name = ?", jobName).Update("status", "running").Error
+}
+
+func (s *Store) RecordSchedulerJobEnd(jobName string, status string, lastError *string, lastRun time.Time, nextRun *time.Time) error {
+	updates := map[string]interface{}{
+		"status":      status,
+		"last_run_at": lastRun,
+	}
+	if lastError != nil {
+		updates["last_error"] = *lastError
+	} else {
+		updates["last_error"] = nil
+	}
+	if nextRun != nil && !nextRun.IsZero() {
+		updates["next_run_at"] = nextRun
+	}
+	return s.db.Model(&SchedulerJob{}).Where("job_name = ?", jobName).Updates(updates).Error
 }
 
 func (s *Store) SeedCLIConfigs() error {

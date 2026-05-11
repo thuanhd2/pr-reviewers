@@ -12,6 +12,7 @@ import { Route as rootRouteImport } from './routes/__root'
 import { Route as AuthenticatedRouteRouteImport } from './routes/_authenticated/route'
 import { Route as AuthenticatedIndexRouteImport } from './routes/_authenticated/index'
 import { Route as AuthenticatedHistoryRouteImport } from './routes/_authenticated/history'
+import { Route as AuthenticatedSchedulerJobsRouteImport } from './routes/_authenticated/scheduler-jobs'
 import { Route as errors503RouteImport } from './routes/(errors)/503'
 import { Route as errors500RouteImport } from './routes/(errors)/500'
 import { Route as errors404RouteImport } from './routes/(errors)/404'
@@ -38,6 +39,11 @@ const AuthenticatedIndexRoute = AuthenticatedIndexRouteImport.update({
 const AuthenticatedHistoryRoute = AuthenticatedHistoryRouteImport.update({
   id: '/history',
   path: '/history',
+  getParentRoute: () => AuthenticatedRouteRoute,
+} as any)
+const AuthenticatedSchedulerJobsRoute = AuthenticatedSchedulerJobsRouteImport.update({
+  id: '/scheduler-jobs',
+  path: '/scheduler-jobs',
   getParentRoute: () => AuthenticatedRouteRoute,
 } as any)
 const errors503Route = errors503RouteImport.update({
@@ -121,6 +127,7 @@ export interface FileRoutesByFullPath {
   '/500': typeof errors500Route
   '/503': typeof errors503Route
   '/history': typeof AuthenticatedHistoryRoute
+  '/scheduler-jobs': typeof AuthenticatedSchedulerJobsRoute
   '/prs/$prId': typeof AuthenticatedPrsPrIdRouteWithChildren
   '/settings/clis': typeof AuthenticatedSettingsClisRoute
   '/settings/repos': typeof AuthenticatedSettingsReposRoute
@@ -135,6 +142,7 @@ export interface FileRoutesByTo {
   '/500': typeof errors500Route
   '/503': typeof errors503Route
   '/history': typeof AuthenticatedHistoryRoute
+  '/scheduler-jobs': typeof AuthenticatedSchedulerJobsRoute
   '/': typeof AuthenticatedIndexRoute
   '/prs/$prId': typeof AuthenticatedPrsPrIdRouteWithChildren
   '/settings/clis': typeof AuthenticatedSettingsClisRoute
@@ -154,6 +162,7 @@ export interface FileRoutesById {
   '/(errors)/500': typeof errors500Route
   '/(errors)/503': typeof errors503Route
   '/_authenticated/history': typeof AuthenticatedHistoryRoute
+  '/_authenticated/scheduler-jobs': typeof AuthenticatedSchedulerJobsRoute
   '/_authenticated/': typeof AuthenticatedIndexRoute
   '/_authenticated/prs/$prId': typeof AuthenticatedPrsPrIdRouteWithChildren
   '/_authenticated/settings/clis': typeof AuthenticatedSettingsClisRoute
@@ -174,6 +183,7 @@ export interface FileRouteTypes {
     | '/500'
     | '/503'
     | '/history'
+    | '/scheduler-jobs'
     | '/prs/$prId'
     | '/settings/clis'
     | '/settings/repos'
@@ -188,6 +198,7 @@ export interface FileRouteTypes {
     | '/500'
     | '/503'
     | '/history'
+    | '/scheduler-jobs'
     | '/'
     | '/prs/$prId'
     | '/settings/clis'
@@ -206,6 +217,7 @@ export interface FileRouteTypes {
     | '/(errors)/500'
     | '/(errors)/503'
     | '/_authenticated/history'
+    | '/_authenticated/scheduler-jobs'
     | '/_authenticated/'
     | '/_authenticated/prs/$prId'
     | '/_authenticated/settings/clis'
@@ -245,6 +257,13 @@ declare module '@tanstack/react-router' {
       path: '/history'
       fullPath: '/history'
       preLoaderRoute: typeof AuthenticatedHistoryRouteImport
+      parentRoute: typeof AuthenticatedRouteRoute
+    }
+    '/_authenticated/scheduler-jobs': {
+      id: '/_authenticated/scheduler-jobs'
+      path: '/scheduler-jobs'
+      fullPath: '/scheduler-jobs'
+      preLoaderRoute: typeof AuthenticatedSchedulerJobsRouteImport
       parentRoute: typeof AuthenticatedRouteRoute
     }
     '/(errors)/503': {
@@ -390,6 +409,7 @@ interface AuthenticatedRouteRouteChildren {
   AuthenticatedPrsRouteRoute: typeof AuthenticatedPrsRouteRouteWithChildren
   AuthenticatedSettingsRouteRoute: typeof AuthenticatedSettingsRouteRouteWithChildren
   AuthenticatedHistoryRoute: typeof AuthenticatedHistoryRoute
+  AuthenticatedSchedulerJobsRoute: typeof AuthenticatedSchedulerJobsRoute
   AuthenticatedIndexRoute: typeof AuthenticatedIndexRoute
 }
 
@@ -397,6 +417,7 @@ const AuthenticatedRouteRouteChildren: AuthenticatedRouteRouteChildren = {
   AuthenticatedPrsRouteRoute: AuthenticatedPrsRouteRouteWithChildren,
   AuthenticatedSettingsRouteRoute: AuthenticatedSettingsRouteRouteWithChildren,
   AuthenticatedHistoryRoute: AuthenticatedHistoryRoute,
+  AuthenticatedSchedulerJobsRoute: AuthenticatedSchedulerJobsRoute,
   AuthenticatedIndexRoute: AuthenticatedIndexRoute,
 }
 

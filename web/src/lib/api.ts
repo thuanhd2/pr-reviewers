@@ -53,4 +53,5 @@ export const api = {
     const qs = new URLSearchParams(params).toString()
     return request<ListData<any>>(`/history?${qs}`)
   },
+  getSchedulerJobs: () => request<any[]>('/scheduler/jobs'),
 }

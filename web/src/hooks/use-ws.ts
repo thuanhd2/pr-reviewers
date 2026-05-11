@@ -40,6 +40,7 @@ export function useWebSocket() {
         case 'scheduler.tick':
           queryClient.invalidateQueries({ queryKey: ['prs'] })
           queryClient.invalidateQueries({ queryKey: ['dashboard'] })
+          queryClient.invalidateQueries({ queryKey: ['scheduler-jobs'] })
           break
       }
     })

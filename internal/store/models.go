@@ -64,3 +64,18 @@ type CLIConfig struct {
 }
 
 func (CLIConfig) TableName() string { return "cli_configs" }
+
+type SchedulerJob struct {
+	ID        uint       `json:"id" gorm:"primaryKey"`
+	JobName   string     `json:"job_name" gorm:"uniqueIndex"`
+	TaskType  string     `json:"task_type"`
+	CronSpec  string     `json:"cron_spec"`
+	Status    string     `json:"status" gorm:"default:idle"`
+	LastRunAt *time.Time `json:"last_run_at"`
+	NextRunAt *time.Time `json:"next_run_at"`
+	LastError *string    `json:"last_error"`
+	CreatedAt time.Time  `json:"created_at"`
+	UpdatedAt time.Time  `json:"updated_at"`
+}
+
+func (SchedulerJob) TableName() string { return "scheduler_jobs" }
