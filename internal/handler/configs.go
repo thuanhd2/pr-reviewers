@@ -81,7 +81,11 @@ func (h *ConfigHandler) TestConnection(c *gin.Context) {
 		return
 	}
 
-	cmd := exec.Command("git", "-C", found.LocalPath, "remote", "get-url", "origin")
+	remoteName := found.RemoteName
+	if remoteName == "" {
+		remoteName = "origin"
+	}
+	cmd := exec.Command("git", "-C", found.LocalPath, "remote", "get-url", remoteName)
 	out, err := cmd.Output()
 	if err != nil {
 		Error(c, http.StatusBadRequest, 5005, "git repo not accessible at local path")
