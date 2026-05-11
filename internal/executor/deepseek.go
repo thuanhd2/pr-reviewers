@@ -23,7 +23,7 @@ func NewDeepSeekExecutor(cfg config.DeepSeekConfig, timeout time.Duration) *Deep
 func (e *DeepSeekExecutor) Name() string { return "deepseek" }
 
 func (e *DeepSeekExecutor) GetReviewCommand(ctx context.Context, pr *store.PullRequest, rc *store.RepoConfig) (*ReviewCommand, error) {
-	prompt := BuildReviewPrompt(rc.ExtraRules)
+	prompt := BuildReviewPrompt(pr, rc.ExtraRules)
 
 	return &ReviewCommand{
 		Command:    "npx -y @anthropic-ai/claude-code@latest -p --dangerously-skip-permissions --output-format json",

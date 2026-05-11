@@ -145,7 +145,9 @@ func (h *ExecuteReviewHandler) Handle(ctx context.Context, t *asynq.Task) error 
 	startTime := time.Now()
 	logLine("Running executor: %s", exe.Name())
 
+	log.Println("Running executor to review PR: ", pr.URL)
 	if err := c.Run(); err != nil {
+		log.Println("Error when running executor to review PR: ", pr.URL, err)
 		logLine("ERROR: executor run: %v", err)
 		logLine("STDOUT: %s", stdout.String())
 		logLine("STDERR: %s", stderr.String())

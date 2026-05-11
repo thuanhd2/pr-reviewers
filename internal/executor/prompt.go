@@ -1,11 +1,15 @@
 package executor
 
-import "fmt"
+import (
+	"fmt"
 
-func BuildReviewPrompt(extraRules *string) string {
-	prompt := `Bạn là reviewer cho một Pull Request. Repository đã được checkout sẵn trong thư mục hiện tại. Hãy thực hiện review các thay đổi của PR.
+	"github.com/thuanho/pr-reviewers/internal/store"
+)
 
-Sử dụng ` + "`git log` và `git diff`" + ` để xem các thay đổi. Phân tích code về:
+func BuildReviewPrompt(pr *store.PullRequest, extraRules *string) string {
+	prompt := fmt.Sprintf(`Bạn là reviewer cho Pull Request #%s của repository %s. Repository đã được checkout sẵn trong thư mục hiện tại. Hãy thực hiện review các thay đổi của PR.
+
+Sử dụng github_mcp để xem nội dung pull request, các thay đổi trong pull request. Phân tích code về:
 - Lỗi logic, bug tiềm ẩn
 - Vấn đề bảo mật (SQL injection, XSS, thiếu validation, lộ secret)
 - Vấn đề hiệu năng (N+1 query, vòng lặp không cần thiết, thiếu cache)
@@ -38,7 +42,7 @@ Trong đó:
 - comments: Danh sách các góp ý cụ thể, mỗi comment có file_path, line_start, line_end, body
 - line_start và line_end là số dòng trong file (bắt đầu từ 1)
 
-CHỈ trả về JSON, không thêm text hay markdown bên ngoài.`
+CHỈ trả về JSON, không thêm text hay markdown bên ngoài.`, pr.URL, pr.RepoFullName)
 
 	if extraRules != nil && *extraRules != "" {
 		prompt += fmt.Sprintf("\n\nQuy tắc bổ sung: %s", *extraRules)
