@@ -52,6 +52,7 @@ type RepoConfig struct {
 	CLI          string  `json:"cli"`
 	ExtraRules   *string `json:"extra_rules"`
 	Active       bool    `json:"active" gorm:"default:true"`
+	RemoteName   string  `json:"remote_name"`
 }
 
 func (RepoConfig) TableName() string { return "repo_configs" }

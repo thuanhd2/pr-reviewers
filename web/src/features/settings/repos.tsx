@@ -27,6 +27,7 @@ export default function SettingsRepos() {
     local_path: '',
     cli: 'claude-code',
     extra_rules: '',
+    remote_name: 'origin',
   })
   const [deleteId, setDeleteId] = useState<number | null>(null)
 
@@ -35,7 +36,7 @@ export default function SettingsRepos() {
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['repo-configs'] })
       setShowAdd(false)
-      setForm({ repo_full_name: '', local_path: '', cli: 'claude-code', extra_rules: '' })
+      setForm({ repo_full_name: '', local_path: '', cli: 'claude-code', extra_rules: '', remote_name: 'origin' })
     },
   })
 
@@ -93,6 +94,13 @@ export default function SettingsRepos() {
                     setForm({ ...form, extra_rules: e.target.value })
                   }
                 />
+                <Input
+                  placeholder='origin'
+                  value={form.remote_name}
+                  onChange={(e) =>
+                    setForm({ ...form, remote_name: e.target.value })
+                  }
+                />
                 <SelectDropdown
                   defaultValue={form.cli}
                   onValueChange={(v) => setForm({ ...form, cli: v })}
@@ -126,6 +134,9 @@ export default function SettingsRepos() {
                     <span className='font-medium'>{cfg.repo_full_name}</span>
                     <span className='text-sm text-muted-foreground ml-4'>
                       {cfg.local_path}
+                    </span>
+                    <span className='text-sm text-muted-foreground ml-2'>
+                      [{cfg.remote_name || 'origin'}]
                     </span>
                     <span className='text-sm text-muted-foreground ml-2'>
                       [{cfg.cli}]

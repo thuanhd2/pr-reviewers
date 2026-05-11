@@ -204,8 +204,15 @@ func (h *ExecuteReviewHandler) Handle(ctx context.Context, t *asynq.Task) error 
 	return nil
 }
 
+func remoteName(rc *store.RepoConfig) string {
+	if rc.RemoteName == "" {
+		return "origin"
+	}
+	return rc.RemoteName
+}
+
 func (h *ExecuteReviewHandler) fetchRemoteBranch(pr *store.PullRequest, rc *store.RepoConfig) error {
-	c := exec.Command("git", "-C", rc.LocalPath, "fetch", "origin", pr.HeadBranch)
+	c := exec.Command("git", "-C", rc.LocalPath, "fetch", remoteName(rc), pr.HeadBranch)
 	if err := c.Run(); err != nil {
 		return fmt.Errorf("fetch remote branch: %w", err)
 	}
@@ -215,7 +222,7 @@ func (h *ExecuteReviewHandler) fetchRemoteBranch(pr *store.PullRequest, rc *stor
 func (h *ExecuteReviewHandler) ensureWorktree(pr *store.PullRequest, rc *store.RepoConfig) (string, error) {
 	if pr.WorktreePath != "" {
 		if _, err := os.Stat(pr.WorktreePath); err == nil {
-			c := exec.Command("git", "-C", pr.WorktreePath, "fetch", "origin")
+			c := exec.Command("git", "-C", pr.WorktreePath, "fetch", remoteName(rc))
 			c.Run()
 			c = exec.Command("git", "-C", pr.WorktreePath, "checkout", pr.HeadSHA)
 			c.Run()

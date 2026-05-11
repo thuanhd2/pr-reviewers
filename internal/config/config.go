@@ -47,6 +47,7 @@ type RepoMapping struct {
 	LocalPath  string  `yaml:"local_path"`
 	CLI        string  `yaml:"cli"`
 	ExtraRules *string `yaml:"extra_rules"`
+	Remote     string  `yaml:"remote"`
 }
 
 type RedisConfig struct {

@@ -27,6 +27,7 @@ repo_mappings:
     local_path: /Users/thuanho/projects/backend-api
     cli: claude-code
     extra_rules: ""
+    remote: origin
 
 deepseek:
   base_url: "https://api.deepseek.com"
