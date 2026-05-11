@@ -116,6 +116,10 @@ func (s *Store) DeleteComment(id uint) error {
 	return s.db.Delete(&ReviewComment{}, id).Error
 }
 
+func (s *Store) DeleteCommentsForReview(reviewID uint) error {
+	return s.db.Where("review_id = ?", reviewID).Delete(&ReviewComment{}).Error
+}
+
 func (s *Store) ListHistory(page, perPage int, repo string) ([]Review, int64, error) {
 	var reviews []Review
 	var total int64

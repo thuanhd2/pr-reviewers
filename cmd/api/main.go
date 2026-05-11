@@ -95,6 +95,7 @@ func main() {
 		api.PUT("/reviews/:id", reviewHandler.Update)
 		api.POST("/reviews/:id/approve", reviewHandler.Approve)
 		api.POST("/reviews/:id/reject", reviewHandler.Reject)
+			api.POST("/reviews/:id/rerun", reviewHandler.Rerun)
 
 		api.GET("/configs/repos", configHandler.ListRepos)
 		api.POST("/configs/repos", configHandler.CreateRepo)

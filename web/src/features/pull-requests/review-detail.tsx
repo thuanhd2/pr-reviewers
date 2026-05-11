@@ -20,6 +20,7 @@ export default function ReviewDetail() {
   const [editedComments, setEditedComments] = useState<Record<number, string>>({})
   const [editedSummary, setEditedSummary] = useState('')
   const [showApprove, setShowApprove] = useState(false)
+  const [showRerun, setShowRerun] = useState(false)
 
   const { data: review, isLoading } = useQuery({
     queryKey: ['reviews', Number(reviewId)],
@@ -35,6 +36,12 @@ export default function ReviewDetail() {
   const approveMutation = useMutation({
     mutationFn: () => api.approveReview(Number(reviewId)),
     onSuccess: () => queryClient.invalidateQueries({ queryKey: ['prs'] }),
+  })
+
+  const rerunMutation = useMutation({
+    mutationFn: () => api.rerunReview(Number(reviewId)),
+    onSuccess: () =>
+      queryClient.invalidateQueries({ queryKey: ['reviews', Number(reviewId)] }),
   })
 
   if (isLoading)
@@ -94,6 +101,12 @@ export default function ReviewDetail() {
               >
                 Save Changes
               </Button>
+              <Button
+                variant='destructive'
+                onClick={() => setShowRerun(true)}
+              >
+                Re-Run
+              </Button>
               {review.status !== 'posted' && (
                 <Button onClick={() => setShowApprove(true)}>
                   Approve & Post
@@ -148,6 +161,17 @@ export default function ReviewDetail() {
             handleConfirm={() => {
               approveMutation.mutate()
               setShowApprove(false)
+            }}
+          />
+
+          <ConfirmDialog
+            open={showRerun}
+            onOpenChange={setShowRerun}
+            title='Re-Run Review'
+            desc='This will clear all old logs and comments, then re-run the review from scratch. Are you sure?'
+            handleConfirm={() => {
+              rerunMutation.mutate()
+              setShowRerun(false)
             }}
           />
         </div>
