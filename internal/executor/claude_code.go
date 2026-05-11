@@ -2,7 +2,6 @@ package executor
 
 import (
 	"context"
-	"fmt"
 	"time"
 
 	"github.com/thuanho/pr-reviewers/internal/store"
@@ -22,10 +21,7 @@ func NewClaudeCodeExecutor(timeout time.Duration) *ClaudeCodeExecutor {
 func (e *ClaudeCodeExecutor) Name() string { return "claude-code" }
 
 func (e *ClaudeCodeExecutor) GetReviewCommand(ctx context.Context, pr *store.PullRequest, rc *store.RepoConfig) (*ReviewCommand, error) {
-	prompt := fmt.Sprintf("/review %s", pr.URL)
-	if rc.ExtraRules != nil && *rc.ExtraRules != "" {
-		prompt += fmt.Sprintf("\n\nAdditional rules: %s", *rc.ExtraRules)
-	}
+	prompt := BuildReviewPrompt(rc.ExtraRules)
 
 	return &ReviewCommand{
 		Command:       "npx -y @anthropic-ai/claude-code@latest -p --dangerously-skip-permissions --output-format json",
