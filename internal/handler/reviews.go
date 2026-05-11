@@ -83,6 +83,29 @@ func (h *ReviewHandler) Approve(c *gin.Context) {
 	Success(c, map[string]string{"status": "review posting"})
 }
 
+func (h *ReviewHandler) Rerun(c *gin.Context) {
+	id, _ := strconv.ParseUint(c.Param("id"), 10, 64)
+
+	review, err := h.store.GetReview(uint(id))
+	if err != nil {
+		Error(c, http.StatusNotFound, 4004, "review not found")
+		return
+	}
+
+	h.store.DeleteCommentsForReview(review.ID)
+	h.store.UpdateReview(review.ID, map[string]interface{}{
+		"summary":         "",
+		"overall_verdict": "",
+		"process_logs":    "",
+		"status":          "draft",
+	})
+
+	payload, _ := json.Marshal(map[string]uint{"pr_id": review.PullRequestID})
+	h.asynqClient.Enqueue(asynq.NewTask(task.TypeExecuteReview, payload))
+
+	Success(c, map[string]string{"status": "review re-running"})
+}
+
 func (h *ReviewHandler) Reject(c *gin.Context) {
 	id, _ := strconv.ParseUint(c.Param("id"), 10, 64)
 
