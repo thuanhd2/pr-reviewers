@@ -4,14 +4,15 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
+	"log"
 	"strings"
 
 	"github.com/hibiken/asynq"
 
+	gh "github.com/google/go-github/v74/github"
 	"github.com/thuanho/pr-reviewers/internal/github"
 	"github.com/thuanho/pr-reviewers/internal/store"
 	"github.com/thuanho/pr-reviewers/internal/ws"
-	gh "github.com/google/go-github/v74/github"
 )
 
 const TypePostReview = "review:post"
@@ -27,17 +28,22 @@ func NewPostReviewHandler(s *store.Store, ghClient *github.Client, hub *ws.Hub) 
 }
 
 func (h *PostReviewHandler) Handle(ctx context.Context, t *asynq.Task) error {
+	log.Println("Starting to post review to github")
 	var payload struct {
 		ReviewID uint `json:"review_id"`
 	}
 	if err := json.Unmarshal(t.Payload(), &payload); err != nil {
+		log.Printf("Error when unmarshal payload: %v", err)
 		return err
 	}
 
 	review, err := h.store.GetReview(payload.ReviewID)
 	if err != nil {
+		log.Printf("Error when get review %d: %v", payload.ReviewID, err)
 		return fmt.Errorf("get review %d: %w", payload.ReviewID, err)
 	}
+
+	log.Printf("Review found: %+v", review)
 
 	pr, err := h.store.GetPR(review.PullRequestID)
 	if err != nil {
@@ -57,6 +63,8 @@ func (h *PostReviewHandler) Handle(ctx context.Context, t *asynq.Task) error {
 		})
 	}
 
+	log.Printf("Total comments for review %d to post: %d", review.ID, len(comments))
+
 	reviewReq := &gh.PullRequestReviewRequest{
 		Body:     gh.Ptr(review.Summary),
 		Event:    gh.Ptr(review.OverallVerdict),
@@ -65,11 +73,12 @@ func (h *PostReviewHandler) Handle(ctx context.Context, t *asynq.Task) error {
 	}
 
 	if _, _, err := h.ghClient.GH().PullRequests.CreateReview(ctx, owner, repoName, pr.Number, reviewReq); err != nil {
-		return fmt.Errorf("post review: %w", err)
+		return fmt.Errorf("Error when post review to github: %w", err)
 	}
 
+	log.Printf("Review posted to github successfully: %+v", reviewReq)
+
 	h.store.UpdateReview(review.ID, map[string]any{"status": "posted"})
-	h.store.UpdatePRStatus(pr.ID, "posted")
 
 	reviewData, _ := json.Marshal(review)
 	h.wsHub.Publish("pr-updates", reviewData)

@@ -26,6 +26,7 @@ func NewFetchPRsHandler(s *store.Store, gh *github.Client, hub *ws.Hub, ac *asyn
 }
 
 func (h *FetchPRsHandler) Handle(ctx context.Context, t *asynq.Task) error {
+	log.Println("Starting to fetch PRs")
 	searchPRs, err := h.ghClient.SearchAssignedPRs()
 	if err != nil {
 		log.Printf("error searching PRs: %v", err)
@@ -54,7 +55,7 @@ func (h *FetchPRsHandler) Handle(ctx context.Context, t *asynq.Task) error {
 		}
 
 		latestReview, _ := h.store.GetLatestReviewForPR(pr.ID)
-		if latestReview == nil || latestReview.CommitSHA != sp.Head.SHA {
+		if latestReview == nil || latestReview.CommitSHA != sp.Head.SHA || latestReview.Status == "reviewing" {
 			payload, _ := json.Marshal(map[string]uint{"pr_id": pr.ID})
 			h.asynqClient.Enqueue(asynq.NewTask(TypeExecuteReview, payload))
 		}

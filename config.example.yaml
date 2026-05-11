@@ -1,3 +1,8 @@
+redis:
+  addr: "localhost:6379"
+database:
+  url: "postgres://pr_reviewer:pr_reviewer_dev@localhost:5432/pr_reviewer?sslmode=disable"
+
 github:
   token: "" # or use GITHUB_TOKEN env var
 
@@ -13,9 +18,20 @@ executors:
   - name: claude-code
     active: true
     timeout: "60m"
+  - name: deepseek
+    active: true
+    timeout: "60m"
 
 repo_mappings:
   - repo: company/backend-api
     local_path: /Users/thuanho/projects/backend-api
     cli: claude-code
     extra_rules: ""
+
+deepseek:
+  base_url: "https://api.deepseek.com"
+  auth_token: ""
+  model: "deepseek-v4-pro"
+  default_opus_model: "deepseek-v4-pro"
+  default_sonet_model: "deepseek-v4-pro"
+  default_haku_model: "deepseek-v4-flash"

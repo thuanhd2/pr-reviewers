@@ -17,9 +17,6 @@ func New(dsn string) (*Store, error) {
 	if err != nil {
 		return nil, err
 	}
-	if err := db.AutoMigrate(&PullRequest{}, &Review{}, &ReviewComment{}, &RepoConfig{}, &CLIConfig{}); err != nil {
-		return nil, err
-	}
 	return &Store{db: db}, nil
 }
 
@@ -117,6 +114,10 @@ func (s *Store) UpdateComment(id uint, body string) error {
 
 func (s *Store) DeleteComment(id uint) error {
 	return s.db.Delete(&ReviewComment{}, id).Error
+}
+
+func (s *Store) DeleteCommentsForReview(reviewID uint) error {
+	return s.db.Where("review_id = ?", reviewID).Delete(&ReviewComment{}).Error
 }
 
 func (s *Store) ListHistory(page, perPage int, repo string) ([]Review, int64, error) {

@@ -13,6 +13,18 @@ type Config struct {
 	Projects  []string        `yaml:"projects_root"`
 	Executors []ExecutorDef   `yaml:"executors"`
 	Repos     []RepoMapping   `yaml:"repo_mappings"`
+	DeepSeek  DeepSeekConfig  `yaml:"deepseek"`
+	Redis     RedisConfig     `yaml:"redis"`
+	Database  DatabaseConfig  `yaml:"database"`
+}
+
+type DeepSeekConfig struct {
+	BaseURL           string `yaml:"base_url"`
+	AuthToken         string `yaml:"auth_token"`
+	Model             string `yaml:"model"`
+	DefaultOpusModel  string `yaml:"default_opus_model"`
+	DefaultSonetModel string `yaml:"default_sonet_model"`
+	DefaultHakuModel  string `yaml:"default_haku_model"`
 }
 
 type GitHubConfig struct {
@@ -35,6 +47,14 @@ type RepoMapping struct {
 	LocalPath  string  `yaml:"local_path"`
 	CLI        string  `yaml:"cli"`
 	ExtraRules *string `yaml:"extra_rules"`
+}
+
+type RedisConfig struct {
+	Addr string `yaml:"addr"`
+}
+
+type DatabaseConfig struct {
+	URL string `yaml:"url"`
 }
 
 func Load(path string) (*Config, error) {

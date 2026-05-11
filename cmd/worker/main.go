@@ -26,21 +26,13 @@ func main() {
 		log.Fatalf("load config: %v", err)
 	}
 
-	dsn := os.Getenv("DATABASE_URL")
-	if dsn == "" {
-		dsn = "postgres://pr_reviewer:pr_reviewer_dev@localhost:5432/pr_reviewer?sslmode=disable"
-	}
-
+	dsn := cfg.Database.URL
 	st, err := store.New(dsn)
 	if err != nil {
 		log.Fatalf("connect database: %v", err)
 	}
 
-	redisAddr := os.Getenv("REDIS_URL")
-	if redisAddr == "" {
-		redisAddr = "localhost:6379"
-	}
-
+	redisAddr := cfg.Redis.Addr
 	redisOpt := asynq.RedisClientOpt{Addr: redisAddr}
 
 	asynqClient := asynq.NewClient(redisOpt)
@@ -49,7 +41,12 @@ func main() {
 	ghClient := github.NewClient(cfg.GitHub.Token)
 
 	reg := executor.NewRegistry()
-	for _, ed := range cfg.Executors {
+	// load executors from database
+	executors, err := st.ListCLIConfigs()
+	if err != nil {
+		log.Fatalf("list cli configs: %v", err)
+	}
+	for _, ed := range executors {
 		if !ed.Active {
 			continue
 		}
@@ -58,6 +55,8 @@ func main() {
 			reg.Register(executor.NewClaudeCodeExecutor(60 * 60 * 1_000_000_000))
 		case "codex":
 			reg.Register(executor.NewCodexExecutor(60 * 60 * 1_000_000_000))
+		case "deepseek":
+			reg.Register(executor.NewDeepSeekExecutor(cfg.DeepSeek, 60*60*1_000_000_000))
 		}
 	}
 

@@ -36,6 +36,8 @@ export const api = {
     request<any>(`/reviews/${id}/approve`, { method: 'POST' }),
   rejectReview: (id: number) =>
     request<any>(`/reviews/${id}/reject`, { method: 'POST' }),
+  rerunReview: (id: number) =>
+    request<any>(`/reviews/${id}/rerun`, { method: 'POST' }),
   getRepoConfigs: () => request<any[]>('/configs/repos'),
   createRepoConfig: (data: any) =>
     request<any>('/configs/repos', { method: 'POST', body: JSON.stringify(data) }),
