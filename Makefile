@@ -51,22 +51,14 @@ db/migrate-install:
 	GOOSE_ARCH=$$(uname -m); \
 	case "$$GOOSE_ARCH" in \
 		x86_64) GOOSE_ARCH="x86_64" ;; \
-		arm64)  GOOSE_ARCH="aarch64" ;; \
-		aarch64) GOOSE_ARCH="aarch64" ;; \
+		arm64|aarch64) GOOSE_ARCH="arm64" ;; \
 		*) echo "Unsupported arch: $$GOOSE_ARCH"; exit 1 ;; \
 	esac; \
-	case "$$GOOSE_OS" in \
-		darwin) GOOSE_TARGET="$${GOOSE_ARCH}-apple-darwin" ;; \
-		linux)  GOOSE_TARGET="$${GOOSE_ARCH}-unknown-linux-gnu" ;; \
-		*)      echo "Unsupported OS: $$GOOSE_OS"; exit 1 ;; \
-	esac; \
-	ASSET="goose-$${GOOSE_TARGET}.tar.gz"; \
-	URL="https://github.com/aaif-goose/goose/releases/latest/download/$${ASSET}"; \
+	ASSET="goose_$${GOOSE_OS}_$${GOOSE_ARCH}"; \
+	URL="https://github.com/pressly/goose/releases/latest/download/$${ASSET}"; \
 	echo "Downloading goose from $$URL"; \
-	curl -fsSL -o /tmp/goose.tar.gz "$$URL" && \
-	tar -xzf /tmp/goose.tar.gz -C vendors/ && \
+	curl -fsSL -o vendors/goose "$$URL" && \
 	chmod +x vendors/goose && \
-	rm -f /tmp/goose.tar.gz && \
 	echo "goose installed to vendors/goose"
 
 db/migrate:
